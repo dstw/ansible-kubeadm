@@ -1,0 +1,57 @@
+---
+- hosts: proxmox
+  become: true
+  gather_facts: false
+  vars_files:
+    - vars/default.yml
+
+  tasks:
+### Control Plane 1
+  - name: Control Plane 1 - Remove
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: control-plane1
+      state: absent
+
+### Control Plane 2
+  - name: Control Plane 2 - Remove
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: control-plane2
+      state: absent
+
+### Node1
+  - name: Node1 - Remove
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node1
+      state: absent
+
+### Node2
+  - name: Node2 - Remove
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node2
+      state: absent
+
+### Node3
+  - name: Node3 - Remove
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node3
+      state: absent

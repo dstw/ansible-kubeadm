@@ -1,0 +1,9 @@
+---
+### install kubeadm & tools
+- import_playbook: kube-setup.yml
+
+### initialize kubernetes cluster, join node & install helm
+- import_playbook: kube-init.yml
+
+### ### deploy metallb, monitoring using helm & deploy apps
+### - import_playbook: kube-apps.yml

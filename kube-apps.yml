@@ -1,0 +1,48 @@
+---
+- hosts: primary_control_plane
+  become: yes
+  become_user: ansible
+  gather_facts: false
+  tasks:
+    - name: add Metallb helm repo
+      ansible.builtin.shell:
+        cmd: "helm repo add metallb https://metallb.github.io/metallb && helm repo update"
+
+    - name: copy Metallb config file
+      ansible.builtin.copy:
+        src: file/metallb-values.yaml
+        dest: $HOME/
+
+    - name: install Metallb with config
+      ansible.builtin.shell:
+        cmd: "helm upgrade --install metallb metallb/metallb --create-namespace --namespace=metallb-system -f metallb-values.yaml"
+
+    - name: add Loki Grafana helm repo
+      ansible.builtin.shell:
+        cmd: "helm repo add grafana https://grafana.github.io/helm-charts && helm repo update"
+
+    - name: install Loki Grafana Prometheus
+      ansible.builtin.shell:
+        cmd: "helm upgrade --install loki grafana/loki-stack --create-namespace --namespace=monitoring --set fluent-bit.enabled=true,promtail.enabled=false,grafana.enabled=true,prometheus.enabled=true,prometheus.alertmanager.persistentVolume.enabled=false,prometheus.server.persistentVolume.enabled=false"
+
+    - name: install ingress-nginx controller
+      ansible.builtin.shell:
+        cmd: "helm upgrade --install ingress-nginx ingress-nginx --create-namespace --namespace ingress-nginx --repo https://kubernetes.github.io/ingress-nginx"
+
+    - name: copy bmi-apps config file
+      ansible.builtin.copy:
+        src: file/bmi-app.yaml
+        dest: $HOME/
+
+    - name: Pause 60 seconds
+      ansible.builtin.pause:
+        seconds: 60
+
+    - name: install bmi-apps
+      ansible.builtin.shell:
+        cmd: "kubectl apply -f ~/bmi-app.yaml"
+
+### Enable it with '-v' param in ansible-playbook
+#   - name: get Grafana credential
+#     ansible.builtin.shell:
+#       cmd: 'kubectl get secret --namespace monitoring loki-grafana -o jsonpath="{.data.admin-password}" | base64 --decode; echo'

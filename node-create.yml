@@ -1,0 +1,195 @@
+---
+- hosts: proxmox
+  become: true
+  gather_facts: false
+  vars_files:
+    - vars/default.yml
+
+  tasks:
+### Control Plane 1
+  - name: Control Plane 1 - Create
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: control-plane1
+      clone: ubuntu2004
+      storage: local-data2
+      format: qcow2
+      newid: 131
+      timeout: 500
+  - name: Control Plane 1 - Wait
+    pause:
+      seconds: 10
+  - name: Control Plane 1 - Update
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: control-plane1
+      ipconfig:
+        ipconfig0: "ip=10.80.11.90/24,gw=10.80.11.1"
+      ciuser: " {{ user_exec }}"
+      sshkeys: "{{ user_exec_publickey }}"
+      update: yes
+  - name: Control Plane 1 - Start
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: control-plane1
+      state: started
+
+### Control Plane 2
+  - name: Control Plane 2 - Create
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: control-plane2
+      clone: ubuntu2004
+      storage: local-data2
+      format: qcow2
+      newid: 132
+      timeout: 500
+  - name: Control Plane 2 - Wait
+    pause:
+      seconds: 10
+  - name: Control Plane 2 - Update
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: control-plane2
+      ipconfig:
+        ipconfig0: "ip=10.80.11.91/24,gw=10.80.11.1"
+      ciuser: " {{ user_exec }}"
+      sshkeys: "{{ user_exec_publickey }}"
+      update: yes
+  - name: Control Plane 2 - Start
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: control-plane2
+      state: started
+
+### Node1
+  - name: Node1 - Create
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node1
+      clone: ubuntu2004
+      storage: local-data2
+      format: qcow2
+      newid: 133
+      timeout: 500
+  - name: Node1 - Wait
+    pause:
+      seconds: 10
+  - name: Node1 - Update
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node1
+      memory: 4096
+      ipconfig:
+        ipconfig0: "ip=10.80.11.92/24,gw=10.80.11.1"
+      ciuser: " {{ user_exec }}"
+      sshkeys: "{{ user_exec_publickey }}"
+      update: yes
+  - name: Node1 - Start
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node1
+      state: started
+
+### Node2
+  - name: Node2 - Create
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node2
+      clone: ubuntu2004
+      storage: local-data2
+      format: qcow2
+      newid: 134
+      timeout: 500
+  - name: Node2 - Wait
+    pause:
+      seconds: 10
+  - name: Node2 - Update
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node2
+      memory: 4096
+      ipconfig:
+        ipconfig0: "ip=10.80.11.93/24,gw=10.80.11.1"
+      ciuser: " {{ user_exec }}"
+      sshkeys: "{{ user_exec_publickey }}"
+      update: yes
+  - name: Node2 - Start
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node2
+      state: started
+
+### Node3
+  - name: Node3 - Create
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node3
+      clone: ubuntu2004
+      storage: local-data2
+      format: qcow2
+      newid: 135
+      timeout: 500
+  - name: Node3 - Wait
+    pause:
+      seconds: 10
+  - name: Node3 - Update
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node3
+      memory: 4096
+      ipconfig:
+        ipconfig0: "ip=10.80.11.94/24,gw=10.80.11.1"
+      ciuser: " {{ user_exec }}"
+      sshkeys: "{{ user_exec_publickey }}"
+      update: yes
+  - name: Node3 - Start
+    community.general.proxmox_kvm:
+      api_user: "root@pam"
+      api_password: "{{ pve_api_pass }}"
+      api_host: "10.80.11.21"
+      node: "st"
+      name: node3
+      state: started

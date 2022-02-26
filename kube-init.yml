@@ -1,0 +1,106 @@
+---
+- hosts: primary_control_plane
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: initialize the cluster
+      ansible.builtin.shell:
+        cmd: "kubeadm init --pod-network-cidr=192.168.0.0/16 --cri-socket /run/containerd/containerd.sock --upload-certs --control-plane-endpoint=cluster.staging.com >> cluster_init.txt 2>&1"
+      args:
+        chdir: $HOME
+        creates: cluster_init.txt
+
+    - name: create .kube directory
+      become: yes
+      become_user: ansible
+      ansible.builtin.file:
+        path: $HOME/.kube
+        state: directory
+        mode: 0700
+
+    - name: copy admin.conf to user's kube config
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ansible/.kube/config
+        remote_src: yes
+        owner: ansible
+
+    - name: install Pod network part 1
+      become: yes
+      become_user: ansible
+      ansible.builtin.shell:
+        cmd: "kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml >> pod_network_setup.txt 2>&1"
+      args:
+        chdir: $HOME
+        creates: pod_network_setup.txt
+
+    - name: install Pod network part 2
+      become: yes
+      become_user: ansible
+      ansible.builtin.shell:
+        cmd: "kubectl create -f https://docs.projectcalico.org/manifests/custom-resources.yaml >> pod_network_setup2.txt 2>&1"
+      args:
+        chdir: $HOME
+        creates: pod_network_setup2.txt
+
+    - name: get join command
+      ansible.builtin.shell:
+        cmd: "kubeadm token create --print-join-command"
+      register: join_command_raw
+
+    - name: set join command
+      ansible.builtin.set_fact:
+        join_command: "{{ join_command_raw.stdout_lines[0] }}"
+
+    - name: get certificate-key for control-plane join
+      ansible.builtin.shell:
+        cmd: "kubeadm init phase upload-certs --upload-certs"
+      register: join_cert_key_raw
+
+    - name: set certificate-key
+      ansible.builtin.set_fact:
+        join_cert_key: "{{ join_cert_key_raw.stdout_lines[-1] }}"
+
+- hosts: node
+  become: yes
+  tasks:
+    - name: join cluster
+      ansible.builtin.shell:
+        cmd: "{{ hostvars['control_plane'].join_command }} >> node_joined.txt"
+      args:
+        chdir: $HOME
+        creates: node_joined.txt
+
+- hosts: secondary_control_plane
+  become: yes
+  tasks:
+    - name: join cluster
+      ansible.builtin.shell:
+        cmd: "{{ hostvars['control_plane'].join_command }} --control-plane --certificate-key {{ hostvars['control_plane'].join_cert_key }}  >> control_plane_joined.txt"
+      args:
+        chdir: $HOME
+        creates: control_plane_joined.txt
+
+- hosts: primary_control_plane
+  become: yes
+  gather_facts: false
+  tasks:
+  - name: add Helm apt-key
+    ansible.builtin.apt_key:
+      url: https://baltocdn.com/helm/signing.asc
+      state: present
+
+  - name: add Helm APT repository
+    ansible.builtin.apt_repository:
+      repo: "deb https://baltocdn.com/helm/stable/debian/ all main"
+
+  - name: Update repository cache
+    ansible.builtin.apt:
+      update_cache: yes
+      force_apt_get: yes
+
+  - name: install Helm
+    ansible.builtin.apt:
+      name: helm
+      state: present
+      force_apt_get: yes

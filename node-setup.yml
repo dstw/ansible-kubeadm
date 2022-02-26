@@ -1,0 +1,53 @@
+---
+- hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+  - name: Update apt repo and cache on all Debian/Ubuntu boxes
+    apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+
+  - name: Upgrade all packages on servers
+    apt: upgrade=dist force_apt_get=yes
+
+  - name: Install tools
+    apt:
+      name: "{{ item }}"
+      state: present
+    loop:
+      - tmux
+      - vim
+      - telnet
+      - git
+      - curl
+      - net-tools
+      - qemu-guest-agent
+
+  - name: Start Qemu Guest Agent
+    service:
+      name: qemu-guest-agent
+      state: started
+      enabled: true
+
+# - name: Install kubernetes
+#   community.general.snap:
+#     name: microk8s
+#     classic: yes
+
+# - name: Setup user for access kubernetes 1
+#   ansible.builtin.user:
+#     name: ansible
+#     group: microk8s
+
+# - name: Setup user for access kubernetes 2
+#   ansible.builtin.file:
+#     path: ~/.kube
+#     state: directory
+#     recurse: yes
+#     owner: ansible
+#     group: ansible
+
+# - name: Reload session
+#   ansible.builtin.shell:
+#     cmd: newgrp microk8s
+#   become_user: ansible

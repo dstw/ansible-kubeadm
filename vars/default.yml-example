@@ -1,0 +1,7 @@
+---
+user_exec: "ubuntu"
+user_exec_publickey: $SSH_PUBLIC_KEY-CHANGE-THIS
+pve_api_user: "root@pam"
+pve_api_pass: $ENCRYPTED_PASS-CHANGE-THIS
+pve_api_host: "192.168.1.1"
+pve_node: "st"

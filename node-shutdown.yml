@@ -1,0 +1,8 @@
+---
+- hosts: all:!proxmox
+  become: true
+  gather_facts: false
+
+  tasks:
+  - name: Unconditionally shut down the machine with all defaults
+    community.general.shutdown:

@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bmi-php
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bmi-php
+  template:
+    metadata:
+      labels:
+        app: bmi-php
+    spec:
+      containers:
+      - name: bmi-php
+        image: dstw/bmi-php:latest
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bmi-php
+spec:
+  selector:
+    app: bmi-php
+  ports:
+    - protocol: TCP
+      port: 8080
+ #type: NodePort
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bmi-php-ingress
+  namespace: default
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: bmi.staging.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: bmi-php
+                port:
+                  number: 8080
+            path: /
+            pathType: Prefix
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loki-grafana-ingress
+  namespace: monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: monitoring.staging.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: loki-grafana
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix
+
+###  # This section is only required if TLS is to be enabled for the Ingress
+###  tls:
+###    - hosts:
+###      - www.example.com
+###      secretName: example-tls

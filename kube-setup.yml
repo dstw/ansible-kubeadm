@@ -1,0 +1,172 @@
+---
+- hosts: all:!proxmox
+  become: yes
+  gather_facts: false
+  tasks:
+  - name: Update apt repo and cache on all Debian/Ubuntu boxes
+    ansible.builtin.apt:
+      update_cache: yes
+      force_apt_get: yes
+
+  - name: Upgrade all packages on servers
+    ansible.builtin.apt:
+      upgrade: dist
+      force_apt_get: yes
+
+  - name: Install tools
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      state: present
+      force_apt_get: yes
+    loop:
+      - linux-image-5.13.0-21-generic
+      - tmux
+      - vim
+      - telnet
+      - git
+      - curl
+      - net-tools
+      - qemu-guest-agent
+      - apt-transport-https
+
+  - name: Start Qemu Guest Agent
+    ansible.builtin.service:
+      name: qemu-guest-agent
+      state: started
+      enabled: true
+
+  - name: Pause 60 seconds
+    ansible.builtin.pause:
+      seconds: 60
+
+  - name: Unconditionally reboot the machine with all defaults
+    ansible.builtin.reboot:
+
+  - name: add Kubernetes apt-key
+    ansible.builtin.apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: add Kubernetes APT repository
+    ansible.builtin.apt_repository:
+      repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: 'kubernetes'
+
+  - name: install Kubenetes main tools
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      state: present
+      force_apt_get: yes
+    loop:
+      - kubelet
+      - kubeadm
+      - kubectl
+
+  - name: check kube{ctl,adm} version
+    ansible.builtin.shell:
+      cmd: kubectl version --client && kubeadm version
+
+  - name: disable swap
+    ansible.builtin.shell:
+      cmd: sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab && swapoff -a
+
+  - name: add settings to sysctl
+    ansible.builtin.copy:
+      src: file/kubernetes.conf
+      dest: /etc/sysctl.d/kubernetes.conf
+
+  - name: reload sysctl
+    ansible.builtin.shell:
+      cmd: sysctl --system
+
+  - name: configure persistent loading of modules
+    ansible.builtin.copy:
+      src: file/containerd.conf
+      dest: /etc/modules-load.d/containerd.conf
+
+  - name: enable kernel modules
+    community.general.modprobe:
+      name: "{{ item }}"
+      state: present
+    loop:
+      - overlay
+      - br_netfilter
+
+  - name: install Containerd tools
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      state: present
+      force_apt_get: yes
+    loop:
+      - gnupg2
+      - software-properties-common
+      - ca-certificates
+
+  - name: add Containerd apt-key
+    ansible.builtin.apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg 
+      state: present
+
+  - name: add Containerd APT repository
+    ansible.builtin.apt_repository:
+      repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+      state: present
+
+  - name: Only run "update_cache=yes" if the last one is more than 3600 seconds ago
+    ansible.builtin.apt:
+      update_cache: yes
+      cache_valid_time: 3600
+
+  - name: install Containerd
+    ansible.builtin.apt:
+      name: containerd.io 
+      state: present
+      force_apt_get: yes
+
+  - name: remove Containerd default config
+    ansible.builtin.file:
+      path: /etc/containerd/config.toml
+      state: absent
+
+  - name: restart Containerd
+    ansible.builtin.service:
+      name: containerd
+      state: restarted
+
+  - name: enable Containerd
+    ansible.builtin.service:
+      name: containerd
+      enabled: yes
+
+  - name: check containerd service status
+    ansible.builtin.shell:
+      cmd: systemctl status containerd
+
+  - name: add cluster name to /etc/hosts
+    ansible.builtin.lineinfile:
+      path: /etc/hosts
+      regexp: '10\.80\.11\.90' 
+      state: absent
+
+  - name: add cluster name to /etc/hosts (on reboot)
+    ansible.builtin.lineinfile:
+      path: /etc/cloud/templates/hosts.debian.tmpl
+      regexp: '10\.80\.11\.90' 
+      state: absent
+
+  - name: add cluster name to /etc/hosts
+    ansible.builtin.lineinfile:
+      path: /etc/hosts
+      line: "10.80.11.90 cluster.staging.com"
+      insertafter: EOF
+
+  - name: add cluster name to /etc/hosts (on reboot)
+    ansible.builtin.lineinfile:
+      path: /etc/cloud/templates/hosts.debian.tmpl
+      line: "10.80.11.90 cluster.staging.com"
+      insertafter: EOF
+
+  - name: kubeadm config images pull
+    ansible.builtin.shell:
+      cmd: kubeadm config images pull --cri-socket /run/containerd/containerd.sock
